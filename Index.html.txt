@@ -1,0 +1,295 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Little Moments</title>
+  <style>
+    :root {
+      --bg-color: #fdf8f5;
+      --primary-color: #722f37; /* Vínová */
+      --secondary-color: #e8a5b8; /* Růžová */
+      --cream-light: #fffaf0; /* Světle krémová */
+      --cream-dark: #f5e6d3; /* Tmavší krémová */
+      --accent-gold: #d4af37;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      font-family: 'Georgia', serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: var(--primary-color);
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 5px;
+      font-weight: normal;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      font-style: italic;
+      margin-bottom: 25px;
+      color: var(--primary-color);
+      opacity: 0.8;
+    }
+
+    .wheel-container {
+      position: relative;
+      width: 340px;
+      height: 340px;
+      margin-bottom: 30px;
+    }
+
+    .pointer {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 25px solid var(--primary-color);
+      z-index: 10;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      box-shadow: 0 8px 24px rgba(114, 47, 55, 0.2);
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: #fff;
+      border: none;
+      padding: 14px 36px;
+      font-size: 1.1rem;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(114, 47, 55, 0.3);
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(114, 47, 55, 0.4);
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Modal Pop-up */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background-color: var(--cream-light);
+      padding: 35px 25px;
+      border-radius: 20px;
+      border: 2px solid var(--secondary-color);
+      max-width: 320px;
+      width: 100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .result-title {
+      font-size: 1.6rem;
+      color: var(--primary-color);
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    .close-btn {
+      background-color: var(--secondary-color);
+      color: var(--primary-color);
+      padding: 10px 24px;
+      font-size: 0.95rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Our Little Moments ❤️</h1>
+  <p class="subtitle">Spin for a little surprise</p>
+
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="400" height="400"></canvas>
+  </div>
+
+  <button id="spinBtn">Spin the wheel</button>
+
+  <div class="modal" id="resultModal">
+    <div class="modal-content">
+      <div class="result-title" id="resultText"></div>
+      <button class="close-btn" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <script>
+    const items = [
+      "Nothing (jk, kiss on the forehead)",
+      "BONUS (two picks of your choice)",
+      "Meal of your choice",
+      "Free kisses",
+      "Free massage",
+      "Spin again",
+      "Free hugs",
+      "Last word",
+      "1+1 (spin twice again)",
+      "Your choice (anything, anytime)",
+      "Board game night",
+      "Movie of your choice",
+      "Position of your choice :)"
+    ];
+
+    const colors = [
+      "#722f37", // Vínová
+      "#fffaf0", // Světle krémová
+      "#e8a5b8", // Růžová
+      "#f5e6d3"  // Tmavší krémová
+    ];
+
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const spinBtn = document.getElementById('spinBtn');
+    const modal = document.getElementById('resultModal');
+    const resultText = document.getElementById('resultText');
+
+    const numItems = items.length;
+    const arc = (2 * Math.PI) / numItems;
+    let currentAngle = 0;
+    let isSpinning = false;
+
+    function drawWheel() {
+      const radius = canvas.width / 2;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < numItems; i++) {
+        const angle = currentAngle + i * arc;
+        
+        // Kreslení výseče
+        ctx.beginPath();
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.moveTo(radius, radius);
+        ctx.arc(radius, radius, radius, angle, angle + arc);
+        ctx.lineTo(radius, radius);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Kreslení textu
+        ctx.save();
+        ctx.translate(radius, radius);
+        ctx.rotate(angle + arc / 2);
+        ctx.textAlign = "right";
+        
+        // Kontrastní barva textu
+        const sliceColor = colors[i % colors.length];
+        ctx.fillStyle = (sliceColor === "#722f37") ? "#fffaf0" : "#722f37";
+        ctx.font = "bold 12px Georgia";
+
+        let text = items[i];
+        if (text.length > 22) {
+          text = text.substring(0, 20) + "...";
+        }
+        ctx.fillText(text, radius - 15, 4);
+        ctx.restore();
+      }
+    }
+
+    function spin() {
+      if (isSpinning) return;
+      isSpinning = true;
+      spinBtn.disabled = true;
+
+      const winningIndex = Math.floor(Math.random() * numItems);
+      
+      // Výpočet cílového úhlu tak, aby šipka nahoře ukazovala na výseč
+      const fullRotations = 5 + Math.floor(Math.random() * 3);
+      const targetSliceAngle = (3 * Math.PI / 2) - (winningIndex * arc) - (arc / 2);
+      const targetAngle = currentAngle + (fullRotations * 2 * Math.PI) + (targetSliceAngle - (currentAngle % (2 * Math.PI)));
+
+      const duration = 4000;
+      const startTime = performance.now();
+      const startAngle = currentAngle;
+
+      function animate(time) {
+        const elapsed = time - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Easing (postupné zpomalování)
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        currentAngle = startAngle + (targetAngle - startAngle) * easeOut;
+
+        drawWheel();
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          isSpinning = false;
+          spinBtn.disabled = false;
+          showResult(items[winningIndex]);
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function showResult(item) {
+      resultText.innerText = item;
+      modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+    }
+
+    spinBtn.addEventListener('click', spin);
+    drawWheel();
+  </script>
+</body>
+</html>
